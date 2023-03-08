@@ -456,6 +456,7 @@ Result GraphicsPipeline::CreateApiObjects(const grfx::GraphicsPipelineCreateInfo
     std::vector<VkDynamicState>      dynamicStatesArray;
     VkPipelineDynamicStateCreateInfo dynamicState = {VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO};
     //
+    // [VRS] todo decide if add VK_DYNAMIC_STATE_FRAGMENT_SHADING_RATE_KHR
     ppxres = InitializeDynamicState(pCreateInfo, dynamicStatesArray, dynamicState);
     if (Failed(ppxres)) {
         return ppxres;
@@ -503,8 +504,13 @@ Result GraphicsPipeline::CreateApiObjects(const grfx::GraphicsPipelineCreateInfo
     vkci.subpass             = 0; // One subpass to rule them all
     vkci.basePipelineHandle  = VK_NULL_HANDLE;
     vkci.basePipelineIndex   = -1;
-
-    VkResult vkres = vkCreateGraphicsPipelines(
+    // [VRS] set pipeline shading rate
+    VkPipelineFragmentShadingRateStateCreateInfoKHR shadingRate = {VK_STRUCTURE_TYPE_PIPELINE_FRAGMENT_SHADING_RATE_STATE_CREATE_INFO_KHR};
+    shadingRate.fragmentSize                                    = VkExtent2D{4, 4};
+    shadingRate.combinerOps[0]                                  = VK_FRAGMENT_SHADING_RATE_COMBINER_OP_KEEP_KHR;
+    shadingRate.combinerOps[1]                                  = VK_FRAGMENT_SHADING_RATE_COMBINER_OP_REPLACE_KHR;
+    vkci.pNext                                                  = &shadingRate;
+    VkResult vkres                                              = vkCreateGraphicsPipelines(
         ToApi(GetDevice())->GetVkDevice(),
         VK_NULL_HANDLE,
         1,

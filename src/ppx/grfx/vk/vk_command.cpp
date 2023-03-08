@@ -433,6 +433,26 @@ void CommandBuffer::SetScissors(uint32_t scissorCount, const grfx::Rect* pScisso
         reinterpret_cast<const VkRect2D*>(pScissors));
 }
 
+void CommandBuffer::SetFragmentShadingRate(uint2 shadingRate)
+{
+    // Tier1 VRS
+    VkExtent2D                         rate{shadingRate.x, shadingRate.y};
+    VkFragmentShadingRateCombinerOpKHR combiner[2] = {
+        VK_FRAGMENT_SHADING_RATE_COMBINER_OP_MAX_KHR,
+        VK_FRAGMENT_SHADING_RATE_COMBINER_OP_MAX_KHR};
+
+    PFN_vkCmdSetFragmentShadingRateKHR mFnCmdSetFragmentShadingRateKHR = (PFN_vkCmdSetFragmentShadingRateKHR)vkGetDeviceProcAddr(
+        ToApi(GetDevice())->GetVkDevice(),
+        "vkCmdSetFragmentShadingRateKHR");
+    if (mFnCmdSetFragmentShadingRateKHR == nullptr) {
+        PPX_LOG_INFO("[VRS] Failed to load vkCmdSetFragmentShadingRateKHR");
+    }
+    mFnCmdSetFragmentShadingRateKHR(
+        mCommandBuffer,
+        &rate,
+        combiner);
+};
+
 void CommandBuffer::BindDescriptorSets(
     VkPipelineBindPoint               bindPoint,
     const grfx::PipelineInterface*    pInterface,

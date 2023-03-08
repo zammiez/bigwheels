@@ -24,6 +24,7 @@ subprojects {
     android {
         namespace 'com.google.bigwheels'
         compileSdk 32
+        android.ndkVersion "25.2.9519653"
 
         compileOptions {
             sourceCompatibility JavaVersion.VERSION_1_8
@@ -97,6 +98,7 @@ subprojects {
             it.buildConfigField "String", "sample_library_name", '"vk_' + project.name + '"'
             sourceSets.main {
                 java.srcDirs = [ "${rootProject.projectDir}/src/android" ]
+                jniLibs.srcDirs = ["${rootProject.projectDir}/src/jniLibs"]
                 assets.srcDirs = [ "assets" ]
                 if (project.name.contains("_xr")) {
                     manifest.srcFile "${rootProject.projectDir}/src/android/AndroidManifest.XR.xml"

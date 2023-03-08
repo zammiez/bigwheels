@@ -77,6 +77,8 @@ public:
         uint32_t          scissorCount,
         const grfx::Rect* pScissors) override;
 
+    virtual void SetFragmentShadingRate(uint2 shadingRate) override;
+
     virtual void BindGraphicsDescriptorSets(
         const grfx::PipelineInterface*    pInterface,
         uint32_t                          setCount,

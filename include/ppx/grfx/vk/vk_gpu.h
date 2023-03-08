@@ -31,7 +31,7 @@ public:
 
     VkPhysicalDevicePtr GetVkGpu() const { return mGpu; }
 
-    const VkPhysicalDeviceLimits& GetLimits() const { return mGpuProperties.limits; }
+    const VkPhysicalDeviceLimits& GetLimits() const { return mGpuProperties.properties.limits; }
 
     float GetTimestampPeriod() const;
 
@@ -51,7 +51,7 @@ protected:
 
 private:
     VkPhysicalDevicePtr                  mGpu;
-    VkPhysicalDeviceProperties           mGpuProperties;
+    VkPhysicalDeviceProperties2          mGpuProperties;
     VkPhysicalDeviceFeatures             mGpuFeatures;
     std::vector<VkQueueFamilyProperties> mQueueFamilies;
 };

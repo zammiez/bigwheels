@@ -21,6 +21,8 @@ namespace ppx {
 namespace grfx {
 namespace vk {
 
+inline PFN_vkCreateRenderPass2KHR func_vkCreateRenderPass2;
+
 void RegisterProfilerFunctions();
 
 #if defined(PPX_ENABLE_PROFILE_GRFX_API_FUNCTIONS)
@@ -215,6 +217,15 @@ inline VkResult CreateRenderPass(
     VkRenderPass*                 pRenderPass)
 {
     return vkCreateRenderPass(device, pCreateInfo, pAllocator, pRenderPass);
+}
+
+inline VkResult CreateRenderPass(
+    VkDevice                       device,
+    const VkRenderPassCreateInfo2* pCreateInfo,
+    const VkAllocationCallbacks*   pAllocator,
+    VkRenderPass*                  pRenderPass)
+{
+    return func_vkCreateRenderPass2(device, pCreateInfo, pAllocator, pRenderPass);
 }
 
 inline VkResult AllocateCommandBuffers(

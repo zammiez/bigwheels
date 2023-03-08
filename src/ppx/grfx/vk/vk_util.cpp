@@ -552,16 +552,17 @@ VkImageUsageFlags ToVkImageUsageFlags(const grfx::ImageUsageFlags& value)
 {
     VkImageUsageFlags flags = 0;
     // clang-format off
-    if (value.bits.transferSrc           ) flags |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
-    if (value.bits.transferDst           ) flags |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
-    if (value.bits.sampled               ) flags |= VK_IMAGE_USAGE_SAMPLED_BIT;
-    if (value.bits.storage               ) flags |= VK_IMAGE_USAGE_STORAGE_BIT;
-    if (value.bits.colorAttachment       ) flags |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-    if (value.bits.depthStencilAttachment) flags |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
-    if (value.bits.transientAttachment   ) flags |= VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT;
-    if (value.bits.inputAttachment       ) flags |= VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT;
-    if (value.bits.shadingRateImageNv    ) flags |= VK_IMAGE_USAGE_SHADING_RATE_IMAGE_BIT_NV;
-    if (value.bits.fragmentDensityMap    ) flags |= VK_IMAGE_USAGE_FRAGMENT_DENSITY_MAP_BIT_EXT;
+    if (value.bits.transferSrc                  ) flags |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+    if (value.bits.transferDst                  ) flags |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+    if (value.bits.sampled                      ) flags |= VK_IMAGE_USAGE_SAMPLED_BIT;
+    if (value.bits.storage                      ) flags |= VK_IMAGE_USAGE_STORAGE_BIT;
+    if (value.bits.colorAttachment              ) flags |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+    if (value.bits.depthStencilAttachment       ) flags |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+    if (value.bits.transientAattachment         ) flags |= VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT;
+    if (value.bits.inputAttachment              ) flags |= VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT;
+    if (value.bits.shadingRateImageNv           ) flags |= VK_IMAGE_USAGE_SHADING_RATE_IMAGE_BIT_NV;
+    if (value.bits.fragmentDensityMap           ) flags |= VK_IMAGE_USAGE_FRAGMENT_DENSITY_MAP_BIT_EXT;
+    if (value.bits.fragmentShadingRateAttachment) flags |= VK_IMAGE_USAGE_FRAGMENT_SHADING_RATE_ATTACHMENT_BIT_KHR;
     // clang-format on
     return flags;
 }

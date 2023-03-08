@@ -28,16 +28,20 @@ namespace grfx {
 
 struct InstanceCreateInfo
 {
-    grfx::Api                api                 = grfx::API_UNDEFINED; // Direct3D or Vulkan.
-    bool                     createDevices       = false;               // Create grfx::Device objects with default options.
-    bool                     enableDebug         = false;               // Enable graphics API debug layers.
-    bool                     enableSwapchain     = true;                // Enable support for swapchain.
-    bool                     useSoftwareRenderer = false;               // Use a software renderer instead of a hardware device (WARP on DirectX).
-    std::string              applicationName;                           // [OPTIONAL] Application name.
-    std::string              engineName;                                // [OPTIONAL] Engine name.
-    bool                     forceDxDiscreteAllocations = false;        // [OPTIONAL] Forces D3D12 to make discrete allocations for resources.
-    std::vector<std::string> vulkanLayers;                              // [OPTIONAL] Additional instance layers.
-    std::vector<std::string> vulkanExtensions;                          // [OPTIONAL] Additional instance extensions.
+    grfx::Api api                 = grfx::API_UNDEFINED; // Direct3D or Vulkan.
+    bool      createDevices       = false;               // Create grfx::Device objects with default options.
+    bool      enableDebug         = false;               // Enable graphics API debug layers.
+    bool      enableSwapchain     = true;                // Enable support for swapchain.
+    bool      useSoftwareRenderer = false;               // Use a software renderer instead of a hardware device (WARP on DirectX).
+    // TODO: [VRS]
+    bool                     enableVRS_pipeline   = false;       // Tier1: per draw call
+    bool                     enableVRS_primitive  = false;       // Tier2: per primitive
+    bool                     enableVRS_attachment = false;       // Tier2: per-screen space
+    std::string              applicationName;                    // [OPTIONAL] Application name.
+    std::string              engineName;                         // [OPTIONAL] Engine name.
+    bool                     forceDxDiscreteAllocations = false; // [OPTIONAL] Forces D3D12 to make discrete allocations for resources.
+    std::vector<std::string> vulkanLayers;                       // [OPTIONAL] Additional instance layers.
+    std::vector<std::string> vulkanExtensions;                   // [OPTIONAL] Additional instance extensions.
 #if defined(PPX_BUILD_XR)
     ppx::XrComponent* pXrComponent = nullptr;
 #endif

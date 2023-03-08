@@ -295,6 +295,10 @@ public:
         uint32_t          scissorCount,
         const grfx::Rect* pScissors) = 0;
 
+    virtual void SetFragmentShadingRate(uint2 shadingRate){
+        // [VRS] TODO: =0
+    };
+
     virtual void BindGraphicsDescriptorSets(
         const grfx::PipelineInterface*    pInterface,
         uint32_t                          setCount,

@@ -179,6 +179,8 @@ RenderPassCreateInfo::RenderPassCreateInfo(const grfx::RenderPassCreateInfo3& ob
     }
     this->V3.pDepthStencilImage = obj.pDepthStencilImage;
 
+    this->V3.pVRSImage = obj.pVRSImage;
+
     // Clear values
     for (uint32_t i = 0; i < this->renderTargetCount; ++i) {
         this->renderTargetClearValues[i] = obj.renderTargetClearValues[i];
@@ -379,6 +381,11 @@ Result RenderPass::CreateImagesAndViewsV3(const grfx::internal::RenderPassCreate
         if (!IsNull(pCreateInfo->V3.pDepthStencilImage)) {
             mDepthStencilImage = pCreateInfo->V3.pDepthStencilImage;
         }
+
+        // Copy VRS image
+        if (!IsNull(pCreateInfo->V3.pVRSImage)) {
+            mVrsImage = pCreateInfo->V3.pVRSImage;
+        }
     }
 
     // Create views
@@ -438,6 +445,137 @@ Result RenderPass::CreateImagesAndViewsV3(const grfx::internal::RenderPassCreate
             }
 
             mDepthStencilView = dsv;
+        }
+        uint32_t w = 1 + pCreateInfo->width / VRS_TEXEL_W; // Todo: use texel size from got properties
+        uint32_t h = 1 + pCreateInfo->height / VRS_TEXEL_H;
+        // [VRS] Create VRS image. TODO: add support for assigning VRS image instead of create here
+        if (mVrsImage.IsNull()) {
+            grfx::ImageCreateInfo vrsImageCreateInfo                         = {};
+            vrsImageCreateInfo.type                                          = grfx::IMAGE_TYPE_2D;
+            vrsImageCreateInfo.width                                         = w;
+            vrsImageCreateInfo.height                                        = h;
+            vrsImageCreateInfo.depth                                         = 1;
+            vrsImageCreateInfo.format                                        = grfx::FORMAT_R8_UINT;
+            vrsImageCreateInfo.sampleCount                                   = grfx::SAMPLE_COUNT_1;
+            vrsImageCreateInfo.mipLevelCount                                 = 1;
+            vrsImageCreateInfo.arrayLayerCount                               = 1;
+            vrsImageCreateInfo.usageFlags.bits.fragmentShadingRateAttachment = true;
+            vrsImageCreateInfo.usageFlags.bits.transferSrc                   = false;
+            vrsImageCreateInfo.usageFlags.bits.transferDst                   = true;
+            vrsImageCreateInfo.usageFlags.bits.sampled                       = true;
+            vrsImageCreateInfo.usageFlags.bits.storage                       = true;
+            vrsImageCreateInfo.usageFlags.bits.colorAttachment               = true;
+
+            grfx::ImagePtr vrsImage;
+            Result         ppxres = GetDevice()->CreateImage(&vrsImageCreateInfo, &vrsImage);
+            if (Failed(ppxres)) {
+                PPX_ASSERT_MSG(false, "[VRS] VRS image create failed");
+                return ppxres;
+            }
+            // [VRS] create vrs content and copy to vrs image
+            {
+                std::vector<uint8_t> vrs_values(w * h, 10);
+
+                /*
+                sizew = 2^((texel / 4) & 3)^
+                sizeh = 2^(texel & 3)^
+                */
+                for (uint x = 0; x <= 2; ++x) {
+                    for (uint y = 0; y <= 2; ++y) {
+                        uint texel = (x << 2) + y;
+                        PPX_LOG_INFO("[VRS] size{" << (1 << x) << "x" << (1 << y) << "} texel value: " << texel);
+                    }
+                }
+                int size1x1 = 0;
+                int size1x2 = 1;
+                int size1x4 = 2;
+                int size2x1 = 4;
+                int size2x2 = 5;
+                int size2x4 = 6;
+                int size4x1 = 8;
+                int size4x2 = 9;
+                int size4x4 = 10;
+
+                for (int x = 0; x < h; x++) {
+                    for (int y = 0; y < w; y++) {
+                        if (y < (w / 2))
+                            vrs_values[x * w + y] = size4x4;
+                        else
+                            vrs_values[x * w + y] = size1x1;
+                    }
+                }
+                int uploadSize = w * h * sizeof(uint8_t);
+
+                grfx::BufferPtr        uploadBuffer;
+                grfx::BufferCreateInfo bufferCreateInfo      = {};
+                bufferCreateInfo.size                        = uploadSize;
+                bufferCreateInfo.usageFlags.bits.transferSrc = true;
+                bufferCreateInfo.memoryUsage                 = grfx::MEMORY_USAGE_CPU_TO_GPU;
+                PPX_CHECKED_CALL(GetDevice()->CreateBuffer(&bufferCreateInfo, &uploadBuffer));
+
+                PPX_CHECKED_CALL(uploadBuffer->CopyFromSource(uploadSize, vrs_values.data()));
+
+                grfx::BufferToImageCopyInfo copyInfo;
+                copyInfo.srcBuffer = {
+                    .imageWidth      = w,
+                    .imageHeight     = h,
+                    .imageRowStride  = uint(sizeof(char)) * w,
+                    .footprintOffset = 0,
+                    .footprintWidth  = w,
+                    .footprintHeight = h,
+                    .footprintDepth  = 1,
+                };
+                copyInfo.dstImage = {
+                    .mipLevel        = 0,
+                    .arrayLayer      = 0,
+                    .arrayLayerCount = 1,
+                    .x               = 0,
+                    .y               = 0,
+                    .z               = 0,
+                    .width           = w,
+                    .height          = h,
+                    .depth           = 1,
+                };
+
+                auto pQueue = GetDevice()->GetGraphicsQueue();
+                pQueue->CopyBufferToImage(
+                    /*pCopyInfos=*/std::vector<grfx::BufferToImageCopyInfo>{copyInfo},
+                    /*pSrcBuffer=*/uploadBuffer,
+                    /*pDstImage=*/vrsImage,
+                    /*mipLevel=*/0,
+                    /*mipLevelCount=*/1,
+                    /*arrayLayer=*/0,
+                    /*arrayLayerCount=*/1,
+                    /*stateBefore=*/RESOURCE_STATE_GENERAL,
+                    /*stateAfter=*/RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+            }
+
+            mVrsImage = vrsImage;
+            PPX_LOG_INFO("[VRS] VRS image created.");
+        }
+
+        // [VRS] create VRS image view
+        if (!mVrsImage.IsNull() && mVrsImageView.IsNull()) {
+            grfx::ImagePtr image = mVrsImage;
+
+            grfx::SampledImageViewCreateInfo vrsCreateInfo = {};
+            vrsCreateInfo.pImage                           = image;
+            vrsCreateInfo.imageViewType                    = image->GuessImageViewType();
+            vrsCreateInfo.format                           = image->GetFormat();
+            vrsCreateInfo.mipLevel                         = 0;
+            vrsCreateInfo.mipLevelCount                    = image->GetMipLevelCount();
+            vrsCreateInfo.arrayLayer                       = 0;
+            vrsCreateInfo.arrayLayerCount                  = image->GetArrayLayerCount();
+            vrsCreateInfo.components                       = {};
+            vrsCreateInfo.ownership                        = pCreateInfo->ownership;
+
+            grfx::SampledImageViewPtr vrsImageView;
+            Result                    ppxres = GetDevice()->CreateSampledImageView(&vrsCreateInfo, &vrsImageView);
+            if (Failed(ppxres)) {
+                PPX_ASSERT_MSG(false, "[VRS] Failed to create VRS image view.");
+                return ppxres;
+            }
+            mVrsImageView = vrsImageView;
         }
     }
 

@@ -17,6 +17,9 @@
 
 #include "ppx/grfx/grfx_config.h"
 
+#define VRS_TEXEL_W 8
+#define VRS_TEXEL_H 8
+
 namespace ppx {
 namespace grfx {
 
@@ -88,6 +91,7 @@ struct RenderPassCreateInfo3
     grfx::Image*                 pRenderTargetImages[PPX_MAX_RENDER_TARGETS]     = {};
     grfx::Image*                 pDepthStencilImage                              = nullptr;
     grfx::ResourceState          depthStencilState                               = grfx::RESOURCE_STATE_DEPTH_STENCIL_WRITE;
+    grfx::Image*                 pVRSImage                                       = nullptr; // [VRS] TODO, add support for assign vrs image
     grfx::RenderTargetClearValue renderTargetClearValues[PPX_MAX_RENDER_TARGETS] = {};
     grfx::DepthStencilClearValue depthStencilClearValue                          = {};
     grfx::AttachmentLoadOp       renderTargetLoadOps[PPX_MAX_RENDER_TARGETS]     = {grfx::ATTACHMENT_LOAD_OP_LOAD};
@@ -122,6 +126,7 @@ struct RenderPassCreateInfo
     uint32_t            height            = 0;
     uint32_t            renderTargetCount = 0;
     grfx::ResourceState depthStencilState = grfx::RESOURCE_STATE_DEPTH_STENCIL_WRITE;
+    bool                useVRS            = true;
 
     // Data unique to grfx::RenderPassCreateInfo
     struct
@@ -147,6 +152,7 @@ struct RenderPassCreateInfo
     {
         grfx::Image* pRenderTargetImages[PPX_MAX_RENDER_TARGETS] = {};
         grfx::Image* pDepthStencilImage                          = nullptr;
+        grfx::Image* pVRSImage                                   = nullptr;
     } V3;
 
     // Clear values
@@ -227,6 +233,8 @@ protected:
     grfx::DepthStencilViewPtr              mDepthStencilView;
     std::vector<grfx::ImagePtr>            mRenderTargetImages;
     grfx::ImagePtr                         mDepthStencilImage;
+    grfx::ImagePtr                         mVrsImage;
+    grfx::SampledImageViewPtr              mVrsImageView;
 };
 
 } // namespace grfx

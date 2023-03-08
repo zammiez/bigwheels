@@ -50,9 +50,16 @@ Result Gpu::CreateApiObjects(const grfx::internal::GpuCreateInfo* pCreateInfo)
     }
 
     mGpu = static_cast<VkPhysicalDevice>(pCreateInfo->pApiObject);
+    VkPhysicalDeviceFragmentShadingRatePropertiesKHR mVrsProperties{
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_SHADING_RATE_PROPERTIES_KHR};
 
-    vkGetPhysicalDeviceProperties(mGpu, &mGpuProperties);
+    mGpuProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
+    mGpuProperties.pNext = &mVrsProperties;
 
+    vkGetPhysicalDeviceProperties2(mGpu, &mGpuProperties);
+
+    PPX_LOG_INFO("[VRS supported min texel size: " << mVrsProperties.minFragmentShadingRateAttachmentTexelSize.height << "x" << mVrsProperties.minFragmentShadingRateAttachmentTexelSize.width)
+    PPX_LOG_INFO("[VRS supported max texel size: " << mVrsProperties.maxFragmentShadingRateAttachmentTexelSize.height << "x" << mVrsProperties.maxFragmentShadingRateAttachmentTexelSize.width)
     vkGetPhysicalDeviceFeatures(mGpu, &mGpuFeatures);
 
     uint32_t count = 0;
@@ -62,8 +69,8 @@ Result Gpu::CreateApiObjects(const grfx::internal::GpuCreateInfo* pCreateInfo)
         vkGetPhysicalDeviceQueueFamilyProperties(mGpu, &count, mQueueFamilies.data());
     }
 
-    mDeviceName     = mGpuProperties.deviceName;
-    mDeviceVendorId = static_cast<grfx::VendorId>(mGpuProperties.deviceID);
+    mDeviceName     = mGpuProperties.properties.deviceName;
+    mDeviceVendorId = static_cast<grfx::VendorId>(mGpuProperties.properties.deviceID);
 
     return ppx::SUCCESS;
 }
@@ -77,7 +84,7 @@ void Gpu::DestroyApiObjects()
 
 float Gpu::GetTimestampPeriod() const
 {
-    return mGpuProperties.limits.timestampPeriod;
+    return mGpuProperties.properties.limits.timestampPeriod;
 }
 
 uint32_t Gpu::GetQueueFamilyCount() const

@@ -26,6 +26,7 @@
 #include "ppx/grfx/vk/vk_shader.h"
 #include "ppx/grfx/vk/vk_swapchain.h"
 #include "ppx/grfx/vk/vk_sync.h"
+#include "ppx/grfx/vk/vk_profiler_fn_wrapper.h"
 
 #define VMA_IMPLEMENTATION
 #define VMA_VULKAN_VERSION 1002000 // Vulkan 1.2
@@ -153,7 +154,17 @@ Result Device::ConfigureExtensions(const grfx::DeviceCreateInfo* pCreateInfo)
             mExtensions.push_back(VK_KHR_TIMELINE_SEMAPHORE_EXTENSION_NAME);
         }
     }
-
+    // [VRS] TODO enable with settings
+    {
+        if (ElementExists(std::string(VK_KHR_FRAGMENT_SHADING_RATE_EXTENSION_NAME), mFoundExtensions)) {
+            PPX_LOG_INFO("[VRS] Enable " << VK_KHR_FRAGMENT_SHADING_RATE_EXTENSION_NAME);
+            mExtensions.push_back(VK_KHR_FRAGMENT_SHADING_RATE_EXTENSION_NAME);
+        }
+        if (ElementExists(std::string(VK_KHR_CREATE_RENDERPASS_2_EXTENSION_NAME), mFoundExtensions)) {
+            PPX_LOG_INFO("[VRS] Enable " << VK_KHR_CREATE_RENDERPASS_2_EXTENSION_NAME);
+            mExtensions.push_back(VK_KHR_CREATE_RENDERPASS_2_EXTENSION_NAME);
+        }
+    }
 #if defined(PPX_VK_EXTENDED_DYNAMIC_STATE)
     if (ElementExists(std::string(VK_EXT_EXTENDED_DYNAMIC_STATE_EXTENSION_NAME), mFoundExtensions)) {
         mExtensions.push_back(VK_EXT_EXTENDED_DYNAMIC_STATE_EXTENSION_NAME);
@@ -299,8 +310,10 @@ Result Device::CreateApiObjects(const grfx::DeviceCreateInfo* pCreateInfo)
 #else
     VkPhysicalDeviceHostQueryResetFeatures queryResetFeatures = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_HOST_QUERY_RESET_FEATURES};
 #endif
+    void* nextPtr                     = nullptr;
     queryResetFeatures.hostQueryReset = VK_TRUE;
-
+    queryResetFeatures.pNext          = nextPtr;
+    nextPtr                           = &queryResetFeatures;
     // VkPhysicalDeviceDynamicRenderingFeatures
 #if defined(VK_KHR_dynamic_rendering)
 
@@ -312,15 +325,25 @@ Result Device::CreateApiObjects(const grfx::DeviceCreateInfo* pCreateInfo)
 
     if (mHasDynamicRendering) {
         dynamicRenderingFeatures.dynamicRendering = VK_TRUE;
-        queryResetFeatures.pNext                  = &dynamicRenderingFeatures;
+        dynamicRenderingFeatures.pNext            = nextPtr;
+        nextPtr                                   = &dynamicRenderingFeatures;
     }
 #endif
-
+    // [VRS] indicate support for VRS. TODO. set from setting
+    {
+        VkPhysicalDeviceFragmentShadingRateFeaturesKHR fragmentShadingRateFeature = {
+            .sType                         = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_SHADING_RATE_FEATURES_KHR,
+            .pipelineFragmentShadingRate   = true,
+            .attachmentFragmentShadingRate = true,
+            .pNext                         = nextPtr,
+        };
+        nextPtr = &fragmentShadingRateFeature;
+    }
     // Get C strings
     std::vector<const char*> extensions = GetCStrings(mExtensions);
 
     VkDeviceCreateInfo vkci      = {VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO};
-    vkci.pNext                   = &queryResetFeatures;
+    vkci.pNext                   = nextPtr;
     vkci.flags                   = 0;
     vkci.queueCreateInfoCount    = CountU32(queueCreateInfos);
     vkci.pQueueCreateInfos       = DataPtr(queueCreateInfos);
@@ -384,6 +407,38 @@ Result Device::CreateApiObjects(const grfx::DeviceCreateInfo* pCreateInfo)
         return ppx::ERROR_API_FAILURE;
     }
 
+    // [VRS] get supported shading rate. TODO: Store properties somewhere
+    {
+        vk::Gpu* pGpu = ToApi(pCreateInfo->pGpu);
+        uint32_t fragmentShadingRateCount;
+        PFN_vkGetPhysicalDeviceFragmentShadingRatesKHR
+            mFnGetPhysicalDeviceFragmentShadingRatesKHR =
+                (PFN_vkGetPhysicalDeviceFragmentShadingRatesKHR)vkGetInstanceProcAddr(
+                    ToApi(GetInstance())->GetVkInstance(), "vkGetPhysicalDeviceFragmentShadingRatesKHR");
+
+        if (mFnGetPhysicalDeviceFragmentShadingRatesKHR == nullptr) {
+            PPX_LOG_INFO("[VRS] Failed to load vkGetPhysicalDeviceFragmentShadingRatesKHR");
+        }
+        else {
+            auto res = mFnGetPhysicalDeviceFragmentShadingRatesKHR(pGpu->GetVkGpu(), &fragmentShadingRateCount, nullptr);
+            PPX_LOG_INFO("[VRS] shading rate count: " << fragmentShadingRateCount);
+            std::vector<VkPhysicalDeviceFragmentShadingRateKHR> fragmentShadingRates(fragmentShadingRateCount, VkPhysicalDeviceFragmentShadingRateKHR{
+                                                                                                                   .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_SHADING_RATE_KHR,
+                                                                                                               });
+            res = mFnGetPhysicalDeviceFragmentShadingRatesKHR(pGpu->GetVkGpu(), &fragmentShadingRateCount, fragmentShadingRates.data());
+            PPX_LOG_INFO("[VRS] shading rates:");
+            for (const auto& rate : fragmentShadingRates) {
+                // TODO print sampleCounts flag better
+                PPX_LOG_INFO("[] sampleCount:" << rate.sampleCounts << ". size: (" << rate.fragmentSize.width << "," << rate.fragmentSize.height << ")");
+            }
+        }
+        func_vkCreateRenderPass2 =
+            (PFN_vkCreateRenderPass2KHR)vkGetInstanceProcAddr(
+                ToApi(GetInstance())->GetVkInstance(), "vkCreateRenderPass2KHR");
+        if (func_vkCreateRenderPass2 == nullptr) {
+            PPX_LOG_INFO("[VRS] Failed to load vkCreateRenderPass2KHR");
+        }
+    }
     //
     // Timeline semaphore and host query reset is in core start in Vulkan 1.2
     //
