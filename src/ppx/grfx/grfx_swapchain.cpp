@@ -195,6 +195,7 @@ Result Swapchain::CreateRenderPasses()
         rpCreateInfo.renderTargetLoadOps[0]      = grfx::ATTACHMENT_LOAD_OP_CLEAR;
         rpCreateInfo.depthLoadOp                 = grfx::ATTACHMENT_LOAD_OP_CLEAR;
         rpCreateInfo.ownership                   = grfx::OWNERSHIP_RESTRICTED;
+        rpCreateInfo.pFoveationPattern           = mCreateInfo.pFoveationPattern;
 
         grfx::RenderPassPtr renderPass;
         auto                ppxres = GetDevice()->CreateRenderPass(&rpCreateInfo, &renderPass);
@@ -219,6 +220,7 @@ Result Swapchain::CreateRenderPasses()
         rpCreateInfo.renderTargetLoadOps[0]      = grfx::ATTACHMENT_LOAD_OP_LOAD;
         rpCreateInfo.depthLoadOp                 = grfx::ATTACHMENT_LOAD_OP_CLEAR;
         rpCreateInfo.ownership                   = grfx::OWNERSHIP_RESTRICTED;
+        rpCreateInfo.pFoveationPattern           = mCreateInfo.pFoveationPattern;
 
         grfx::RenderPassPtr renderPass;
         auto                ppxres = GetDevice()->CreateRenderPass(&rpCreateInfo, &renderPass);
